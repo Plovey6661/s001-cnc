@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CNC 展示動畫 · 放到個人主頁</title><link rel="stylesheet" href="./showcase.css?v=1"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23142e37'/%3E%3Cpath d='m16 5 11 6-11 6L5 11zm-11 12 11 6 11-6M5 23l11 6 11-6' fill='none' stroke='%2378e0cc' stroke-width='2'/%3E%3C/svg%3E"></head>
+<body><main class="embed-guide"><a class="back" href="./showcase.html">← 返回四場景展示</a><h1>把 CNC 動畫放到個人主頁</h1><p>把下方內容貼到主頁的「自訂 HTML」區塊。四張展示卡會循環播放，訪客點擊就能進入對應的互動場景。</p>
+<label for="embed-scene">展示內容</label><select id="embed-scene"><option value="all">全部四個場景</option><option value="1">01 組裝爆炸圖</option><option value="2">02 切削操作</option><option value="3">03 運動指令</option><option value="4">04 自由加工 · 小貓圖案</option></select>
+<textarea id="embed-code" readonly aria-label="可複製的嵌入 HTML"></textarea><button id="copy-embed">複製嵌入碼</button><p id="copy-status" role="status"></p>
+<p>若主頁不接受 HTML，可直接加入「動畫展示頁」連結。單張卡片也能獨立嵌入；動畫會在離開畫面時暫停，並尊重裝置的減少動態效果設定。</p>
+<h2>展示頁與直接入口</h2><div class="links"><a href="./showcase.html">四個場景的動畫展示 ↗</a><a href="./?scene=1">01 組裝爆炸圖 ↗</a><a href="./?scene=2">02 切削操作 ↗</a><a href="./?scene=3">03 運動指令 ↗</a><a href="./?scene=4">04 自由加工 ↗</a><a href="./cat-program.txt" download>下載展示中的小貓程式</a></div>
+<p>小貓圖案使用與第四關相同的 AeroBasic 命令，下載後可貼進第四關，載入刀路並確認執行。</p></main><script type="module" src="./embed.js"></script></body></html>

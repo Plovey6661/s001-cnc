@@ -1,0 +1,65 @@
+{
+  "sourceScene": "Assets/Scenes/S00 1.unity",
+  "sourceNode": "/CNC/Z-axis/8/Assem1/CutterPosition/Cutter4Position/cutter4",
+  "asset": "Assets/3D FYP/cutter4.obj",
+  "baseColor": [
+    0.2509804,
+    0.2627451,
+    0.29803923,
+    1
+  ],
+  "metalness": 0,
+  "roughness": 0.5,
+  "meshes": [
+    {
+      "name": "PartBody",
+      "meshFileId": "-1393281163073059472",
+      "position": {
+        "byteOffset": 0,
+        "count": 45000
+      },
+      "normal": {
+        "byteOffset": 180000,
+        "count": 45000
+      },
+      "bounds": {
+        "min": [
+          -3.383169174194336,
+          1.2424739599227905,
+          -4.000287055969238
+        ],
+        "max": [
+          -3.3792312145233154,
+          1.380268931388855,
+          -3.996349334716797
+        ]
+      }
+    }
+  ],
+  "bounds": {
+    "min": [
+      -3.383169174194336,
+      1.2424739599227905,
+      -4.000287055969238
+    ],
+    "max": [
+      -3.3792312145233154,
+      1.380268931388855,
+      -3.996349334716797
+    ]
+  },
+  "cutReferenceThree": [
+    -3.381200196991676,
+    1.2424739091340808,
+    -3.998318226973924
+  ],
+  "cutRadiusMm": 1,
+  "position": {
+    "byteOffset": 0,
+    "count": 45000
+  },
+  "normal": {
+    "byteOffset": 180000,
+    "count": 45000
+  }
+}

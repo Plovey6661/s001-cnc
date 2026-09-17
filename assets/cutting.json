@@ -1,0 +1,203 @@
+{
+  "sourceScene": "Assets/Scenes/S00 1.unity",
+  "origin": [
+    10.14,
+    0.65,
+    0.86
+  ],
+  "coordinateSystem": "Unity world unless property contains Three; Three = (Unity - origin) * [1,1,-1]",
+  "manager": {
+    "componentId": "1482297029",
+    "meshComponentId": "1788808805",
+    "cutterComponentId": "315111425",
+    "isOn": true
+  },
+  "workpiece": {
+    "name": "Mesh4",
+    "path": "/CNC/X-axis/Y-axis/WorkpicePosition/Mesh4",
+    "componentType": "CustomMesh in DaiDa.dll",
+    "localPosition": {
+      "x": 0.0020251274,
+      "y": 0.0036360025,
+      "z": -0.0012025833
+    },
+    "worldMatrix": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        6.7620251274
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        1.8463360025000002
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        4.853797416700001
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "originThree": [
+      -3.3779748726000003,
+      1.1963360025000003,
+      -3.993797416700001
+    ],
+    "sizeMeters": [
+      0.04,
+      0.02,
+      0.06
+    ],
+    "dimensionsMm": {
+      "length": 40,
+      "width": 60,
+      "height": 20
+    },
+    "localBounds": {
+      "min": [
+        -0.02,
+        0,
+        -0.03
+      ],
+      "max": [
+        0.02,
+        0.02,
+        0.03
+      ]
+    },
+    "worldBounds": {
+      "min": [
+        6.742025127400001,
+        1.8463360025000002,
+        4.823797416700001
+      ],
+      "max": [
+        6.7820251274,
+        1.8663360025000002,
+        4.883797416700001
+      ]
+    },
+    "threeBounds": {
+      "min": [
+        -3.3979748726,
+        1.1963360025000003,
+        -4.023797416700001
+      ],
+      "max": [
+        -3.3579748726000007,
+        1.2163360025000003,
+        -3.9637974167000007
+      ]
+    },
+    "cutCount": 600,
+    "materialGuid": "64894357a3e0bc34fad3f2a4fa115d6f",
+    "material": "Number1",
+    "motionAxes": [
+      "X",
+      "Y"
+    ]
+  },
+  "tool": {
+    "asset": "Assets/3D FYP/cutter4.obj",
+    "cacheArtifact": "9c/9c154ffd0c716a58c1a6b4e517f3afd6",
+    "sourceGuid": "3652fbb7a0934de459fa996909077398",
+    "prefabInstanceId": "1620730626",
+    "rootSourceTransformId": "-8679921383154817045",
+    "worldMatrix": [
+      [
+        -4.750545287173438e-10,
+        0.009999999532124758,
+        1.0927847685324291e-10,
+        6.7587998030083245
+      ],
+      [
+        -0.05000000666062425,
+        -9.501088505897217e-11,
+        -3.2783540522328627e-10,
+        1.892473909134081
+      ],
+      [
+        -1.639177297433746e-09,
+        -1.0927846322521057e-10,
+        0.009999999999999993,
+        4.858318226973924
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "cutReferenceWorld": [
+      6.7587998030083245,
+      1.892473909134081,
+      4.858318226973924
+    ],
+    "cutReferenceThree": [
+      -3.381200196991676,
+      1.2424739091340808,
+      -3.998318226973924
+    ],
+    "cutRadiusMm": 1,
+    "cutRadiusMeters": 0.001,
+    "materialGuid": "7ae7dc43beb34534db810dee799107f1",
+    "material": "GroundMat",
+    "motionAxes": [
+      "Z"
+    ]
+  },
+  "motion": {
+    "unit": "mm",
+    "unityUnitsPerMm": 0.001,
+    "directionsUnity": {
+      "X": [
+        -1,
+        0,
+        0
+      ],
+      "Y": [
+        0,
+        0,
+        -1
+      ],
+      "Z": [
+        0,
+        1,
+        0
+      ]
+    },
+    "directionsThree": {
+      "X": [
+        -1,
+        0,
+        0
+      ],
+      "Y": [
+        0,
+        0,
+        1
+      ],
+      "Z": [
+        0,
+        1,
+        0
+      ]
+    },
+    "hierarchy": "X moves all descendants of /CNC/X-axis; Y moves all descendants of /CNC/X-axis/Y-axis; Z moves all descendants of /CNC/Z-axis. Exploded part grouping is not a motion grouping."
+  },
+  "inactiveWorkpiecePlaceholders": [
+    "Cube",
+    "Cube (1)"
+  ],
+  "algorithmEvidence": "VibrationOnCollision extends OptimizeHoleCylinderCutter from DaiDa.dll. Commented legacy implementation lowers mesh vertex y to max(0, cutterLocal.y) wherever xz distance squared < (radius / 1000)^2 and vertex y > cutterLocal.y. Active base implementation pending DLL inspection."
+}

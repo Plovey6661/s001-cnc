@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#142e37">
+  <title>S001 · CNC 組裝、切削與自由加工</title>
+  <meta name="description" content="以 S001 原始模型學習 CNC 組裝、XYZ 手動切削和 A3200 AeroBasic 運動命令，自行編寫程式、預覽刀路，觀察直線、圓弧、貝茲及 PVT 刀痕。">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23142e37'/%3E%3Cpath d='m16 5 11 6-11 6L5 11zm-11 12 11 6 11-6M5 23l11 6 11-6' fill='none' stroke='%2378e0cc' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./style.css?v=12">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<script>if(new URLSearchParams(location.search).get("demo")==="1")document.body.classList.add("demo-mode");</script>
+<div class="demo-caption" id="demo-caption" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="./" aria-label="CNC 組裝探索首頁"><span class="brandmark" aria-hidden="true">◈</span><span>CNC<span class="brand-sub">ASSEMBLY EXPLORER</span></span></a>
+    <div class="project-name"><span class="scene-tag">SCENE S001</span><h1>組裝探索</h1></div>
+    <nav class="level-tabs" aria-label="關卡選擇"><button id="level-one" class="level-tab active" aria-pressed="true"><b>01</b>組裝爆炸圖</button><button id="level-two" class="level-tab" aria-pressed="false"><b>02</b>切削操作</button><button id="level-three" class="level-tab" aria-pressed="false"><b>03</b>運動指令</button><button id="level-four" class="level-tab" aria-pressed="false"><b>04</b>自由加工</button></nav>
+  </header>
+  <main class="workspace">
+    <aside class="parts-panel level-one-only" aria-label="零件清單">
+      <div class="panel-heading"><div><span class="eyebrow">COMPONENTS</span><h2>零件總覽 <span>08</span></h2></div><button id="show-all" class="text-button" title="顯示全部零件">全部顯示</button></div>
+      <div id="parts" class="parts"></div>
+      <section class="detail" aria-live="polite"><div class="detail-title"><span class="eyebrow" id="detail-index">ASSEMBLY</span><span class="tiny-rule"></span></div><h3 id="detail-name">從整體，看到每個零件。</h3><p id="detail-description">拖曳拆解滑桿，查看八個組件的位置關係。點選零件可聚焦細節。</p><div class="detail-actions" hidden><button id="isolate" class="outline-button">單獨顯示</button><button id="clear-selection" class="text-button">取消選取</button></div></section>
+      <footer class="panel-footer"><span>S00 1 / VR2</span><span>3D MODEL STUDY</span></footer>
+    </aside>
+    <aside class="machining-panel level-two-only" aria-label="第二關加工控制">
+      <div class="machine-heading"><span class="eyebrow">LEVEL 02 / MACHINING</span><h2>手動切削</h2><p>按一下微調，按住連續移動。</p></div>
+      <div class="coordinates" aria-label="三軸位移，單位毫米"><div><b>X</b><output id="coord-x">0.000</output></div><div><b>Y</b><output id="coord-y">0.000</output></div><div><b>Z</b><output id="coord-z">0.000</output></div><span>相對 S001 初始位置 · mm</span></div>
+      <div class="jog-controls" aria-label="六個軸向移動按鈕">
+        <div class="jog-row"><span><b>X</b><small>平台</small></span><button class="jog-button" data-axis="x" data-sign="-1" aria-label="X 軸負向移動">X −</button><button class="jog-button" data-axis="x" data-sign="1" aria-label="X 軸正向移動">X ＋</button></div>
+        <div class="jog-row"><span><b>Y</b><small>平台</small></span><button class="jog-button" data-axis="y" data-sign="-1" aria-label="Y 軸負向移動">Y −</button><button class="jog-button" data-axis="y" data-sign="1" aria-label="Y 軸正向移動">Y ＋</button></div>
+        <div class="jog-row"><span><b>Z</b><small>主軸</small></span><button class="jog-button" data-axis="z" data-sign="-1" aria-label="Z 軸負向移動，下刀">Z −</button><button class="jog-button" data-axis="z" data-sign="1" aria-label="Z 軸正向移動，抬刀">Z ＋</button></div>
+      </div>
+      <div class="feed-options"><label>單次步距<select id="step"><option value="0.1">0.1 mm</option><option value="1" selected>1 mm</option><option value="5">5 mm</option></select></label><label>連續速度<select id="feed"><option value="2">2 mm/s</option><option value="10" selected>10 mm/s</option><option value="25">25 mm/s</option></select></label></div>
+      <button id="spindle" class="spindle-button" aria-pressed="false">啟動主軸</button>
+      <p id="cut-hint" class="cut-hint">啟動主軸，按住 Z− 下刀，再用 X／Y 移動工件。</p>
+      <div class="machining-measures"><div><span>刀尖距原始頂面</span><output id="tool-gap">26.14 mm</output></div><div><span>最深刀痕</span><output id="cut-depth">0.00 mm</output></div><div><span>已移除體積</span><output id="cut-volume">0.0 mm³</output></div></div>
+      <button id="reset-machining" class="reset-machining">↺ 重置位置與工件</button>
+      <div class="stock-spec"><b>S001 · Mesh4 / Cutter4</b><span>工件 40 × 60 × 20 mm · 切削半徑 1 mm</span><span>X 帶動 Y 與工件，Z 帶動主軸與刀具。</span></div>
+    </aside>
+    <aside class="program-panel level-three-only" aria-label="第三關運動命令學習">
+      <div class="program-heading"><span class="eyebrow">A3200 / AEROBASIC</span><h2>指令變成刀路</h2><p>6 個主要命令 · 7 種路徑練習</p></div>
+      <div class="lesson-picker"><label for="lesson-select">選擇運動課題</label><div><select id="lesson-select"></select><button id="lesson-load">載入範例</button></div></div>
+      <div class="lesson-card"><code id="lesson-command"></code><p id="lesson-behavior"></p><p id="lesson-tip"></p><details><summary>參數格式與來源</summary><code id="lesson-syntax"></code><small id="lesson-source"></small></details></div>
+      <div class="program-editor-label"><label for="program-editor">AeroBasic 程式</label><span>每行一個命令</span></div>
+      <textarea id="program-editor" class="program-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="AeroBasic 程式編輯器"></textarea>
+      <div class="program-options"><label><input id="program-restart" type="checkbox" checked>從初始位置重新加工</label><label><input id="program-cut" type="checkbox" checked>啟用刀具切削</label><label><input id="program-path" type="checkbox" checked>顯示預計路徑</label><label>播放速度<select id="program-speed" aria-label="程式播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+      <div class="program-actions"><button id="program-validate">檢查程式</button><button id="program-run" class="primary">執行程式</button><button id="program-step">逐段執行</button><button id="program-pause" disabled>暫停</button><button id="program-stop" disabled>停止</button><button id="program-reset">重置工件</button></div>
+      <p id="program-message" class="program-message" role="status" aria-live="polite"></p>
+      <div class="program-progress"><b id="program-current">等待執行</b><span id="program-time">0.0 / 0.0 s</span><progress id="program-progress" max="100" value="0" aria-label="程式進度"></progress></div>
+      <div class="program-coordinates"><div>X <output id="program-x">0.000</output></div><div>Y <output id="program-y">0.000</output></div><div>Z <output id="program-z">0.000</output></div><span>S001 軸位移 · mm｜工件頂面 Z ≈ −26.138</span></div>
+      <div class="program-results"><span>最深刀痕 <output id="program-depth">0.00 mm</output></span><span>移除體積 <output id="program-volume">0.0 mm³</output></span></div>
+      <details class="program-plan"><summary>逐行路徑與時間</summary><div id="program-lines"></div></details>
+      <details class="program-reference"><summary>手冊命令與模擬範圍</summary><p>手冊 Motion 主分類列出 39 個條目，包含定位、等待、啟用等功能，並非 39 種刀路。此關呈現其中 6 個主要命令。</p><a href="./manual-reference.html" target="_blank" rel="noopener">查看完整 39 項命令與行為對照 ↗</a><p>ABSOLUTE／INCREMENTAL 切換絕對／增量座標。SECONDS／MINUTES 控制進給時間單位；DWELL 永遠是秒，PVT TIME 永遠是毫秒。</p><p>本關 METRIC＝mm、ENGLISH＝inch；未另設 F 時為 10 mm/s，RAPID 預設各軸 25 mm/s。這些是網頁練習設定。</p><p>依手冊的 AeroBasic 語法模擬路徑與頂面材料移除；未模擬伺服加減速、完整任務排程、切削力或倒扣。G 碼對照涉及 CNC Option，未確認實機授權。未知命令會指出行號，整段不會開始執行。</p></details>
+    </aside>
+    <aside class="program-panel level-four-only" aria-label="第四關自由加工">
+      <div class="program-heading"><span class="eyebrow">LEVEL 04 / FREE MACHINING</span><h2>自由加工</h2><p>寫下自己的程式，確認刀路後開始切削。</p></div>
+      <ol class="free-flow" aria-label="自由加工流程"><li class="current" aria-current="step"><b>1</b>輸入程式</li><li><b>2</b>載入刀路</li><li><b>3</b>確認執行</li></ol>
+      <div class="program-editor-label"><label for="free-editor">AeroBasic 程式</label><span>每行一個命令</span></div>
+      <textarea id="free-editor" class="program-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="自由加工程式編輯器" placeholder="在此輸入或貼上 AeroBasic 程式。&#10;每行一個命令；載入刀路後再確認執行。"></textarea>
+      <p class="free-origin-note">沿用 S001 軸位移：工件頂面約為 Z −26.138 mm；再往負向下刀會切入工件。載入刀路不會移動機台或重置工件。</p>
+      <div class="program-options"><label><input id="free-restart" type="checkbox" checked>重置工件，從初始位置加工</label><label><input id="free-cut" type="checkbox" checked>啟用刀具切削</label><label><input id="free-path" type="checkbox" checked>顯示預計路徑</label><label>播放速度<select id="free-speed" aria-label="程式播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+      <div class="program-actions"><button id="free-validate">載入刀路</button><button id="free-run" class="primary" disabled>確認並執行</button><button id="free-step" disabled>確認逐段</button><button id="free-pause" disabled>暫停</button><button id="free-stop" disabled>停止</button><button id="free-reset">重置工件</button></div>
+      <p id="free-message" class="program-message" role="status" aria-live="polite"></p>
+      <div class="program-progress"><b id="free-current">等待載入刀路</b><span id="free-time">0.0 / 0.0 s</span><progress id="free-progress" max="100" value="0" aria-label="程式進度"></progress></div>
+      <div class="program-coordinates"><div>X <output id="free-x">0.000</output></div><div>Y <output id="free-y">0.000</output></div><div>Z <output id="free-z">0.000</output></div><span>S001 軸位移 · mm｜工件頂面 Z ≈ −26.138</span></div>
+      <div class="program-results"><span>最深刀痕 <output id="free-depth">0.00 mm</output></span><span>移除體積 <output id="free-volume">0.0 mm³</output></span></div>
+      <details class="program-plan"><summary>逐行路徑與時間</summary><div id="free-lines"></div></details>
+      <details class="program-reference"><summary>可用命令與座標說明</summary><p>沿用第三關的 AeroBasic 數值命令：LINEAR、RAPID、CW、CCW、BEZIER QUAD／CUBIC、PVT。可混合使用，每行明確寫出命令。</p><p>LINEAR X… Y… Z… F…：直線。CW／CCW X… Y… I… J… F…：圓弧，I／J 是相對起點的圓心偏移。完整參數可在第三關查看。</p><p>ABSOLUTE／INCREMENTAL 切換絕對／增量座標；METRIC＝mm、ENGLISH＝inch。SECONDS／MINUTES 控制進給單位；DWELL 永遠是秒，PVT TIME 永遠是毫秒。</p><p>預設 METRIC、SECONDS、ABSOLUTE，F 為 10 mm/s。取消「重置工件」可從目前位置接續加工；修改程式或設定後，請重新載入刀路。</p><p>依 A3200 手冊模擬路徑與頂面切削。支援數值參數，不支援變數、迴圈、完整 CNC G 碼或倒扣；不支援的命令會顯示行號並阻止執行。</p><a href="./manual-reference.html" target="_blank" rel="noopener">查看完整 39 項命令與行為對照 ↗</a></details>
+    </aside>
+    <section class="viewer" aria-label="CNC 三維模型與加工視圖">
+      <div class="viewport-heading"><div><span class="eyebrow" id="viewport-eyebrow">LEVEL 01 / CNC ASSEMBLY</span><h2 id="view-title">拆解視圖</h2></div><span id="view-state">EXPLODED VIEW</span></div>
+      <div class="machine-view-switch machining-view"><button id="closeup" class="active">加工近景</button><button id="whole-machine">完整機台</button></div>
+      <div class="view-tools" role="group" aria-label="視角"><button class="view-button active" data-view="iso">立體</button><button class="view-button" data-view="front">正面</button><button class="view-button" data-view="side">側面</button><button class="view-button" data-view="top">頂面</button><span class="tool-divider"></span><button id="reset-view" class="view-button" title="重設視角">↺<span class="sr-only">重設視角</span></button></div>
+      <div id="canvas-wrap"><canvas id="canvas" aria-label="可拖曳旋轉的 CNC 模型" tabindex="0"></canvas><div id="labels" aria-hidden="true"></div></div>
+      <div id="loading" class="loading"><span class="loader"></span><strong>正在載入 CNC 模型</strong><span>還原場景中的零件與位置</span></div>
+      <div class="viewer-options level-one-only"><label><input id="labels-toggle" type="checkbox" checked>零件標籤</label><label><input id="grid-toggle" type="checkbox" checked>參考格線</label></div>
+      <div class="axis-key" aria-hidden="true"><span class="axis-y">Y ↑</span><span class="axis-x">X ↗</span><span class="axis-z">Z ↖</span></div>
+      <div class="explode-dock level-one-only">
+        <div class="dock-top"><div class="dock-title"><span class="eyebrow">EXPLODE</span><label for="explode">拆解程度</label></div><output id="explode-value" for="explode">85<span>%</span></output><button id="play" class="play-button" aria-label="播放組裝與拆解動畫"><span id="play-icon">▶</span><span id="play-text">播放拆解</span></button></div>
+        <input id="explode" type="range" min="0" max="100" value="85" step="1" aria-label="拆解程度">
+        <div class="dock-bottom"><button id="assemble">完整組裝</button><span>拖曳以探索組裝關係</span><button id="explode-all">完全拆解</button></div>
+      </div>
+      <div class="cutting-status machining-view"><span id="machine-status">主軸停止</span><span class="cut-legend">青綠色標示已切削表面</span></div>
+      <div class="interaction-hint"><span>左鍵拖曳 · 旋轉</span><span>滾輪 · 縮放</span><span>右鍵拖曳 · 平移</span></div>
+      <div id="status" class="sr-only" role="status" aria-live="polite"></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js?v=12"></script>
+</body>
+</html>
+
+
+
+
