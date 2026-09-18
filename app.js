@@ -10,8 +10,8 @@ let showcaseDemo=null,demoPlaying=!matchMedia('(prefers-reduced-motion:reduce)')
 if(demoMode)document.body.classList.add('demo-mode');
 const metadata = [
   {id:'marble',zh:'大理石立柱',en:'Marble Stone Stand',description:'機台的承重結構。包含底座與立柱，支撐各軸和加工平台。',offset:[-1.6,.4,-.5]},
-  {id:'linear',zh:'直線滑台',en:'Linear Stage',description:'安裝於立柱上的直線滑台，與主軸組件相連。',offset:[-.2,1.3,-.5]},
-  {id:'spindle',zh:'主軸',en:'Spindle',description:'主軸本體與刀具夾持部件。位於加工區上方，連接垂直滑台。',offset:[1.7,1.4,-.4]},
+  {id:'linear',zh:'Z 軸平台',en:'Z-axis',description:'安裝於立柱上的 Z 軸平台，與主軸組件相連。',offset:[-.2,1.3,-.5]},
+  {id:'spindle',zh:'主軸',en:'Spindle',description:'主軸本體與刀具夾持部件。位於加工區上方，連接 Z 軸平台。',offset:[1.7,1.4,-.4]},
   {id:'frame',zh:'機架',en:'Machine Frame',description:'機台下方的支撐機架與面板，包含原始 AOMC 標誌。',offset:[2.3,-.05,-.8]},
   {id:'xaxis',zh:'X 軸平台',en:'X-axis',description:'水平運動平台的一部分。與 Y 軸平台疊合，形成加工平台的平面移動結構。',offset:[-2.1,.35,.7]},
   {id:'yaxis',zh:'Y 軸平台',en:'Y-axis',description:'與 X 軸相互配合的水平運動平台，上方承載夾具。',offset:[-.1,.6,.85]},
