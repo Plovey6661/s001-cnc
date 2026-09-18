@@ -6,10 +6,10 @@
   <title>S001 · CNC 組裝、切削與自由加工</title>
   <meta name="description" content="以 S001 原始模型學習 CNC 組裝、XYZ 手動切削和 A3200 AeroBasic 運動命令，自行編寫程式、預覽刀路，觀察直線、圓弧、貝茲及 PVT 刀痕。">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23142e37'/%3E%3Cpath d='m16 5 11 6-11 6L5 11zm-11 12 11 6 11-6M5 23l11 6 11-6' fill='none' stroke='%2378e0cc' stroke-width='2'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./style.css?v=12">
+  <link rel="stylesheet" href="./style.css?v=13">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
-<body>
+<body data-stage="learn">
 <script>if(new URLSearchParams(location.search).get("demo")==="1")document.body.classList.add("demo-mode");</script>
 <div class="demo-caption" id="demo-caption" aria-hidden="true"></div>
   <header class="topbar">
@@ -19,9 +19,19 @@
   </header>
   <main class="workspace">
     <aside class="parts-panel level-one-only" aria-label="零件清單">
-      <div class="panel-heading"><div><span class="eyebrow">COMPONENTS</span><h2>零件總覽 <span>08</span></h2></div><button id="show-all" class="text-button" title="顯示全部零件">全部顯示</button></div>
+      <div class="panel-heading"><div><span class="eyebrow">LEVEL 01 / LEARNING</span><h2>零件總覽 <span>08</span></h2></div><button id="show-all" class="text-button" title="顯示全部零件">全部顯示</button></div>
+      <div class="scene-one-tabs" role="tablist" aria-label="場景 1 學習關卡">
+        <button type="button" id="stage-learn" class="scene-one-tab active" aria-selected="true">1-1 認識零件</button>
+        <button type="button" id="stage-quiz" class="scene-one-tab" aria-selected="false">1-2 名稱配對</button>
+      </div>
+      <p class="quiz-brief" id="quiz-brief" hidden>八個零件名稱都在下拉選單裡。先點模型中的零件，再選出它的名字。</p>
       <div id="parts" class="parts"></div>
-      <section class="detail" aria-live="polite"><div class="detail-title"><span class="eyebrow" id="detail-index">ASSEMBLY</span><span class="tiny-rule"></span></div><h3 id="detail-name">從整體，看到每個零件。</h3><p id="detail-description">拖曳拆解滑桿，查看八個組件的位置關係。點選零件可聚焦細節。</p><div class="detail-actions" hidden><button id="isolate" class="outline-button">單獨顯示</button><button id="clear-selection" class="text-button">取消選取</button></div></section>
+      <div class="quiz-bar" id="quiz-bar" hidden>
+        <p id="quiz-score" role="status">尚未核對</p>
+        <button type="button" id="quiz-check" class="outline-button">核對答案</button>
+        <button type="button" id="quiz-reset" class="text-button">重設配對</button>
+      </div>
+      <section class="detail" aria-live="polite"><div class="detail-title"><span class="eyebrow" id="detail-index">LEVEL 1-1</span><span class="tiny-rule"></span></div><h3 id="detail-name">從整體，看到每個零件。</h3><p id="detail-description">拖曳拆解滑桿。平台蓋會較晚打開，避免先擋住機架。名稱標在零件旁，合裝時仍可讀。</p><div class="detail-actions" hidden><button id="isolate" class="outline-button">單獨顯示</button><button id="clear-selection" class="text-button">取消選取</button></div></section>
       <footer class="panel-footer"><span>S00 1 / VR2</span><span>3D MODEL STUDY</span></footer>
     </aside>
     <aside class="machining-panel level-two-only" aria-label="第二關加工控制">
@@ -75,7 +85,7 @@
       <div class="view-tools" role="group" aria-label="視角"><button class="view-button active" data-view="iso">立體</button><button class="view-button" data-view="front">正面</button><button class="view-button" data-view="side">側面</button><button class="view-button" data-view="top">頂面</button><span class="tool-divider"></span><button id="reset-view" class="view-button" title="重設視角">↺<span class="sr-only">重設視角</span></button></div>
       <div id="canvas-wrap"><canvas id="canvas" aria-label="可拖曳旋轉的 CNC 模型" tabindex="0"></canvas><div id="labels" aria-hidden="true"></div></div>
       <div id="loading" class="loading"><span class="loader"></span><strong>正在載入 CNC 模型</strong><span>還原場景中的零件與位置</span></div>
-      <div class="viewer-options level-one-only"><label><input id="labels-toggle" type="checkbox" checked>零件標籤</label><label><input id="grid-toggle" type="checkbox" checked>參考格線</label></div>
+      <div class="viewer-options level-one-only"><label><input id="labels-toggle" type="checkbox" checked>零件名稱</label><label><input id="grid-toggle" type="checkbox" checked>參考格線</label></div>
       <div class="axis-key" aria-hidden="true"><span class="axis-y">Y ↑</span><span class="axis-x">X ↗</span><span class="axis-z">Z ↖</span></div>
       <div class="explode-dock level-one-only">
         <div class="dock-top"><div class="dock-title"><span class="eyebrow">EXPLODE</span><label for="explode">拆解程度</label></div><output id="explode-value" for="explode">85<span>%</span></output><button id="play" class="play-button" aria-label="播放組裝與拆解動畫"><span id="play-icon">▶</span><span id="play-text">播放拆解</span></button></div>
@@ -87,7 +97,7 @@
       <div id="status" class="sr-only" role="status" aria-live="polite"></div>
     </section>
   </main>
-  <script type="module" src="./app.js?v=12"></script>
+  <script type="module" src="./app.js?v=13"></script>
 </body>
 </html>
 

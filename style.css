@@ -58,3 +58,25 @@ body.demo-mode #canvas-wrap{inset:0!important}
 body.demo-mode #canvas{pointer-events:none}
 body.demo-mode .demo-caption{display:block;position:fixed;left:50%;transform:translateX(-50%);width:max-content;max-width:calc(100% - 28px);bottom:13px;z-index:12;padding:4px 9px;border:1px solid #d6e4e3;border-radius:5px;background:#fffffff0;font:12px/1.5 Consolas,"Microsoft JhengHei",monospace;color:#2c7468;text-align:center;letter-spacing:.025em;pointer-events:none}
 body.demo-mode .loading strong{font-size:14px}body.demo-mode .loading>span:not(.loader){display:none}
+
+.scene-one-tabs{display:flex;gap:6px;margin:0 16px 10px;padding:4px;background:#f1f5f6;border:1px solid #e1e9eb;border-radius:7px}
+.scene-one-tab{flex:1;border:0;background:none;border-radius:4px;padding:9px 8px;font-size:13px;color:#4b6570}
+.scene-one-tab.active{background:#1a3b43;color:#fff}
+.quiz-brief{margin:0 18px 10px;font-size:13px;line-height:1.7;color:#6e858e}
+.quiz-brief[hidden],.quiz-bar[hidden]{display:none}
+.quiz-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:4px 18px 8px;padding:10px 0 4px;border-top:1px solid var(--line)}
+#quiz-score{margin:0;flex:1;font-size:13px;color:#2f5d56}
+.part-quiz-hint,.part-guess-wrap{display:none}
+.part-no{display:none}
+.part-guess{width:100%;padding:7px 6px;border:1px solid #bed3da;border-radius:5px;background:white;color:#294852;font-size:13px}
+body[data-stage="quiz"] .part-copy{display:none}
+body[data-stage="quiz"] .part-quiz-hint{display:block;font-size:13px;font-weight:600;color:#3f6771}
+body[data-stage="quiz"] .part-guess-wrap{display:block;flex:1;min-width:0;padding-right:6px}
+body[data-stage="quiz"] .part-select{flex:0 0 auto;padding-right:4px}
+.part-row.guess-ok{background:#e8f7f1;border-color:#b7e2d3}
+.part-row.guess-bad{background:#fdf1ef;border-color:#ead0cb}
+.model-label b{display:none}
+.model-label span{display:block!important;font-weight:650;letter-spacing:.02em}
+.model-label{padding:6px 9px;max-width:148px;white-space:nowrap}
+.model-label.selected-label{background:#153d39;color:#fff;border-color:#153d39}
+@media(max-width:760px){.scene-one-tabs{margin:0 12px 8px}.scene-one-tab{font-size:12px;padding:8px 6px}.quiz-brief,.quiz-bar{margin-left:16px;margin-right:16px}body[data-stage="quiz"] .parts{grid-template-columns:1fr}}

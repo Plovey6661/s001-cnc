@@ -22,14 +22,19 @@ const $ = s=>document.querySelector(s);
 const groups=new Map(), meshList=[], labels=new Map(), leaders=new Map();
 let selected=null, isolated=false, amount=.85, target=.85, playing=false, phase=0, last=performance.now(), ready=false;
 let renderer,controls,camera,scene,grid,modelScale=1,baseBox,modelInfo;
-let level=1,machining=null,machiningPromise=null,programming=null,freeProgramming=null;
+let level=1,sceneOneStage='learn',machining=null,machiningPromise=null,programming=null,freeProgramming=null;
 const eyeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
+function shuffle(list){const a=list.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function partExplode(part,t){return part.id==='cover'?THREE.MathUtils.clamp((t-.52)/.48,0,1):t;}
 for(const [i,part] of metadata.entries()){
   part.index=String(i+1).padStart(2,'0');
+  part.guessId='';
   const row=document.createElement('div');row.className='part-row';row.dataset.part=part.id;
-  row.innerHTML=`<button class="part-select" data-part="${part.id}" aria-pressed="false"><span class="part-no">${part.index}</span><span><span class="part-name">${part.zh}</span><span class="part-en">${part.en}</span></span></button><button class="eye" aria-label="隱藏${part.zh}" aria-pressed="true">${eyeIcon}</button>`;
+  const options=['<option value="">選擇名稱</option>',...shuffle(metadata).map(o=>`<option value="${o.id}">${o.zh}</option>`)].join('');
+  row.innerHTML=`<button class="part-select" data-part="${part.id}" aria-pressed="false"><span class="part-no">${part.index}</span><span class="part-copy"><span class="part-name">${part.zh}</span><span class="part-en">${part.en}</span></span><span class="part-quiz-hint">此零件</span></button><label class="part-guess-wrap"><span class="sr-only">選擇此零件的名稱</span><select class="part-guess" data-part="${part.id}">${options}</select></label><button class="eye" aria-label="隱藏此零件" aria-pressed="true">${eyeIcon}</button>`;
   row.querySelector('.part-select').onclick=()=>selectPart(selected===part.id?null:part.id);
   row.querySelector('.eye').onclick=()=>{const g=groups.get(part.id);if(!g)return;g.visible=!g.visible;isolated=false;syncVisibility();};
+  row.querySelector('.part-guess').addEventListener('change',e=>{part.guessId=e.target.value;row.classList.remove('guess-ok','guess-bad');updateLabels();});
   $('#parts').append(row);
 }
 function syncVisibility(){
@@ -40,8 +45,13 @@ function selectPart(id){
   if(id&&!metadata.some(p=>p.id===id))throw new Error('未知零件');
   selected=id;const part=metadata.find(p=>p.id===id);
   if(isolated){if(id){for(const [key,g] of groups)g.visible=key===id;}else{for(const g of groups.values())g.visible=true;isolated=false;}if(ready)fitView('iso');}
-  if(part){groups.get(id)&&(groups.get(id).visible=true);$('#detail-index').textContent=`COMPONENT ${part.index} / 08`;$('#detail-name').textContent=part.zh;$('#detail-description').textContent=part.description;$('.detail-actions').hidden=false;$('#status').textContent=`已選取${part.zh}`;}
-  else{$('#detail-index').textContent='ASSEMBLY';$('#detail-name').textContent='從整體，看到每個零件。';$('#detail-description').textContent='拖曳拆解滑桿，查看八個組件的位置關係。點選零件可聚焦細節。';$('.detail-actions').hidden=true;}
+  if(part){
+    groups.get(id)&&(groups.get(id).visible=true);
+    if(sceneOneStage==='quiz'){$('#detail-index').textContent='COMPONENT';$('#detail-name').textContent='已選取一個零件';$('#detail-description').textContent='請用左側下拉選單選出這個零件的名稱。八個名稱都會出現在選項裡。';$(`#parts .part-row[data-part="${id}"] .part-guess`)?.focus();}
+    else{$('#detail-index').textContent=`COMPONENT ${part.index} / 08`;$('#detail-name').textContent=part.zh;$('#detail-description').textContent=part.description;}
+    $('.detail-actions').hidden=false;$('#status').textContent=sceneOneStage==='quiz'?'已選取一個零件':`已選取${part.zh}`;
+  }else if(sceneOneStage==='quiz'){$('#detail-index').textContent='LEVEL 1-2';$('#detail-name').textContent='為每個零件選出正確名稱。';$('#detail-description').textContent='左側列出全部零件名稱。點選模型中的零件，再用下拉選單配對。';$('.detail-actions').hidden=true;}
+  else{$('#detail-index').textContent='LEVEL 1-1';$('#detail-name').textContent='從整體，看到每個零件。';$('#detail-description').textContent='拖曳拆解滑桿。平台蓋會較晚打開，避免先擋住機架。名稱標在零件旁，合裝時仍可讀。';$('.detail-actions').hidden=true;}
   for(const p of metadata){const row=$(`[data-part="${p.id}"]`);row.classList.toggle('selected',p.id===id);row.querySelector('.part-select').setAttribute('aria-pressed',String(p.id===id));labels.get(p.id)?.classList.toggle('selected-label',p.id===id);}
   meshList.forEach(m=>{m.material.emissive.set(m.userData.part===id?0x198b74:0);m.material.emissiveIntensity=m.userData.part===id?.22:0;});
   syncVisibility();
@@ -62,7 +72,7 @@ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>fitView(b.data
 $('#reset-view').onclick=()=>fitView('iso');
 $('#canvas').addEventListener('keydown',e=>{if(e.key==='Escape'){selectPart(null);stopPlay();}if(e.key.toLowerCase()==='r')fitView('iso');});
 
-function visibleBox(at=amount){const box=new THREE.Box3();for(const [id,g] of groups)if(g.visible){const b=g.userData.box.clone();b.translate(new THREE.Vector3(...metadata.find(p=>p.id===id).offset).multiplyScalar(at));box.union(b);}return box.isEmpty()?baseBox.clone():box;}
+function visibleBox(at=amount){const box=new THREE.Box3();for(const [id,g] of groups)if(g.visible){const part=metadata.find(p=>p.id===id);const b=g.userData.box.clone();b.translate(new THREE.Vector3(...part.offset).multiplyScalar(partExplode(part,at)));box.union(b);}return box.isEmpty()?baseBox.clone():box;}
 function fitView(view='iso',at=amount,forceWhole=false){
   if(!ready)return;
   if(level>=2&&machining&&!forceWhole)return machining.focus(view);
@@ -75,18 +85,43 @@ function fitView(view='iso',at=amount,forceWhole=false){
   camera.up.set(0,1,0);controls.target.copy(center);controls.update();
   document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
 }
-function updateParts(){for(const p of metadata){const g=groups.get(p.id);if(g)g.position.set(...p.offset).multiplyScalar(level===1?amount:0);}scene?.updateMatrixWorld(true);}
+function updateParts(){for(const p of metadata){const g=groups.get(p.id);if(g)g.position.set(...p.offset).multiplyScalar(level===1?partExplode(p,amount):0);}scene?.updateMatrixWorld(true);}
 const projected=new THREE.Vector3();
+function labelText(part){
+  if(sceneOneStage==='quiz'){const guess=metadata.find(p=>p.id===part.guessId);return guess?guess.zh:'？';}
+  return part.zh;
+}
 function updateLabels(){
   if(!ready||level!==1||$('#labels').hidden)return;
-  const rect=$('#canvas-wrap').getBoundingClientRect();const placed=[];
-  for(const p of metadata){const g=groups.get(p.id),l=labels.get(p.id),leader=leaders.get(p.id);if(!g||!l)continue;l.hidden=leader.hidden=!g.visible;if(!g.visible)continue;
+  const rect=$('#canvas-wrap').getBoundingClientRect();const items=[];
+  let cx=0,cy=0,count=0;
+  for(const p of metadata){
+    const g=groups.get(p.id),l=labels.get(p.id),leader=leaders.get(p.id);if(!g||!l||!leader)continue;
+    if(!g.visible){l.hidden=leader.hidden=true;continue;}
     projected.copy(g.userData.center).add(g.position).project(camera);
     const ax=(projected.x*.5+.5)*rect.width,ay=(-projected.y*.5+.5)*rect.height;
-    if(projected.z>1||projected.z<0||ax<0||ax>rect.width||ay<0||ay>rect.height){l.hidden=leader.hidden=true;continue;}
-    const width=p.id===selected?110:29;let x=ax+21,y=ay-23;
-    for(const [dx,dy] of [[21,-23],[-32,-18],[34,16],[-25,28],[5,-53],[55,-36],[-55,-40],[10,52]]){x=Math.max(width/2+5,Math.min(rect.width-width/2-5,ax+dx));y=Math.max(110,Math.min(rect.height-35,ay+dy));if(!placed.some(a=>Math.abs(a.x-x)<(a.width+width)/2+6&&Math.abs(a.y-y)<27))break;}
-    placed.push({x,y,width});l.style.left=`${x}px`;l.style.top=`${y}px`;leader.style.left=`${ax}px`;leader.style.top=`${ay}px`;leader.style.width=`${Math.hypot(x-ax,y-ay)}px`;leader.style.transform=`rotate(${Math.atan2(y-ay,x-ax)}rad)`;
+    if(projected.z>1||projected.z<0||ax<-40||ax>rect.width+40||ay<-40||ay>rect.height+40){l.hidden=leader.hidden=true;continue;}
+    const text=labelText(p);l.querySelector('span').textContent=text;
+    items.push({p,l,leader,ax,ay,text,width:Math.min(140,22+text.length*12)});
+    cx+=ax;cy+=ay;count++;
+  }
+  if(count){cx/=count;cy/=count;}else{cx=rect.width/2;cy=rect.height/2;}
+  const outward=amount<.18?58:32;const placed=[];
+  for(const item of items){
+    const dx=item.ax-cx,dy=item.ay-cy,mag=Math.hypot(dx,dy)||1;
+    const sides=[[dx/mag*outward,dy/mag*outward],[outward,0],[-outward,0],[0,-outward],[0,outward],[outward,-26],[-outward,-26],[outward,28],[-outward,28],[8,-64],[-8,58],[70,-38],[-70,-38]];
+    let x=item.ax,y=item.ay;
+    for(const [ox,oy] of sides){
+      x=Math.max(item.width/2+8,Math.min(rect.width-item.width/2-8,item.ax+ox));
+      y=Math.max(96,Math.min(rect.height-24,item.ay+oy));
+      if(!placed.some(a=>Math.abs(a.x-x)<(a.width+item.width)/2+8&&Math.abs(a.y-y)<22))break;
+    }
+    placed.push({x,y,width:item.width});
+    item.l.hidden=item.leader.hidden=false;
+    item.l.style.left=`${x}px`;item.l.style.top=`${y}px`;
+    item.leader.style.left=`${item.ax}px`;item.leader.style.top=`${item.ay}px`;
+    item.leader.style.width=`${Math.hypot(x-item.ax,y-item.ay)}px`;
+    item.leader.style.transform=`rotate(${Math.atan2(y-item.ay,x-item.ax)}rad)`;
   }
 }
 function animate(now){
@@ -101,7 +136,7 @@ async function init(){
     scene.add(new THREE.HemisphereLight(0xe8f6ff,0x58615d,2.4));const key=new THREE.DirectionalLight(0xffffff,3.2);key.position.set(4,7,6);scene.add(key);const fill=new THREE.DirectionalLight(0xcfecff,2);fill.position.set(-4,2,-3);scene.add(fill);const rim=new THREE.DirectionalLight(0xffffff,1.5);rim.position.set(0,1,5);scene.add(rim);
     const [info,bin]=await Promise.all([fetch('./assets/model.json').then(r=>{if(!r.ok)throw Error('模型資料無法載入');return r.json();}),fetch('./assets/geometry.bin').then(r=>{if(!r.ok)throw Error('模型幾何無法載入');return r.arrayBuffer();})]);modelInfo=info;
     baseBox=new THREE.Box3(new THREE.Vector3(...info.bounds.min),new THREE.Vector3(...info.bounds.max));modelScale=3/baseBox.getSize(new THREE.Vector3()).y;const shift=baseBox.getCenter(new THREE.Vector3()).negate();shift.y=-baseBox.min.y;
-    for(const p of metadata){const g=new THREE.Group();g.name=p.id;g.userData.box=new THREE.Box3();groups.set(p.id,g);scene.add(g);const l=document.createElement('div');l.className='model-label';l.innerHTML=`<b>${p.index}</b><span>${p.zh}</span>`;const leader=document.createElement('i');leader.className='label-leader';$('#labels').append(leader,l);labels.set(p.id,l);leaders.set(p.id,leader);}
+    for(const p of metadata){const g=new THREE.Group();g.name=p.id;g.userData.box=new THREE.Box3();groups.set(p.id,g);scene.add(g);const l=document.createElement('div');l.className='model-label';l.innerHTML=`<span>${p.zh}</span>`;const leader=document.createElement('i');leader.className='label-leader';$('#labels').append(leader,l);labels.set(p.id,l);leaders.set(p.id,leader);}
     for(const data of info.meshes){
       const g=groups.get(data.part);if(!g)continue;
       const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(bin,data.position.byteOffset,data.position.count),3));
@@ -143,10 +178,48 @@ async function setLevel(next){
   for(const [i,id]of ['level-one','level-two','level-three','level-four'].entries()){const b=$('#'+id);b.classList.toggle('active',level===i+1);b.setAttribute('aria-pressed',String(level===i+1));}
   $('.project-name h1').textContent=['','組裝探索','切削操作','運動指令','自由加工'][level];$('#viewport-eyebrow').textContent=['','LEVEL 01 / CNC ASSEMBLY','LEVEL 02 / CNC MACHINING','LEVEL 03 / AEROBASIC','LEVEL 04 / FREE MACHINING'][level];
   if(level>=2){$('#view-title').textContent=level===4?'自由加工':level===3?'指令與刀路':'切削操作';$('#view-state').textContent=level===4?'PREVIEW & EXECUTE':level===3?'PROGRAMMING LAB':'MANUAL MACHINING';$('#labels').hidden=true;grid.visible=false;machining.activate(true);if(level===3)programming?.activate(true);if(level===4)freeProgramming?.activate(true);}
-  else{machining?.activate(false);$('#labels').hidden=!$('#labels-toggle').checked;grid.visible=$('#grid-toggle').checked;setAmount(target,true);fitView('iso');}
+  else{machining?.activate(false);$('#labels').hidden=!$('#labels-toggle').checked;grid.visible=$('#grid-toggle').checked;setAmount(target,true);fitView('iso');setSceneOneStage(sceneOneStage,true);}
   if(!demoMode)$('.viewer').scrollIntoView({behavior:'smooth',block:'start'});
 }
 $('#level-one').onclick=()=>setLevel(1);$('#level-two').onclick=()=>setLevel(2);$('#level-three').onclick=()=>setLevel(3);$('#level-four').onclick=()=>setLevel(4);
+function setSceneOneStage(stage,keepAmount=false){
+  sceneOneStage=stage==='quiz'?'quiz':'learn';
+  document.body.dataset.stage=sceneOneStage;
+  $('#stage-learn').classList.toggle('active',sceneOneStage==='learn');
+  $('#stage-quiz').classList.toggle('active',sceneOneStage==='quiz');
+  $('#stage-learn').setAttribute('aria-selected',String(sceneOneStage==='learn'));
+  $('#stage-quiz').setAttribute('aria-selected',String(sceneOneStage==='quiz'));
+  $('#quiz-brief').hidden=sceneOneStage!=='quiz';
+  $('#quiz-bar').hidden=sceneOneStage!=='quiz';
+  if(sceneOneStage==='quiz'&&!keepAmount)setAmount(Math.max(amount,.82));
+  if(!selected)selectPart(null);else selectPart(selected);
+  updateLabels();
+}
+$('#stage-learn').onclick=()=>setSceneOneStage('learn',true);
+$('#stage-quiz').onclick=()=>setSceneOneStage('quiz');
+$('#quiz-check').onclick=()=>{
+  let right=0,filled=0;
+  for(const p of metadata){
+    const row=$(`#parts [data-part="${p.id}"]`);
+    const guess=row.querySelector('.part-guess').value;
+    p.guessId=guess;if(guess)filled++;if(guess===p.id)right++;
+    row.classList.toggle('guess-ok',guess===p.id);
+    row.classList.toggle('guess-bad',Boolean(guess)&&guess!==p.id);
+  }
+  $('#quiz-score').textContent=filled===0?'請先為零件選擇名稱':`答對 ${right} / 8`;
+  updateLabels();
+};
+$('#quiz-reset').onclick=()=>{
+  for(const p of metadata){
+    p.guessId='';
+    const row=$(`#parts [data-part="${p.id}"]`);
+    row.querySelector('.part-guess').value='';
+    row.classList.remove('guess-ok','guess-bad');
+  }
+  $('#quiz-score').textContent='尚未核對';
+  updateLabels();
+};
+if(pageParams.get('stage')==='2'||pageParams.get('stage')==='quiz')sceneOneStage='quiz';
 function registerTools(){
   if(!document.modelContext?.registerTool)return;const lifecycle=new AbortController();window.addEventListener('pagehide',()=>lifecycle.abort(),{once:true});
   const tool={name:'configure_cnc_view',title:'調整 CNC 爆炸圖',description:'設定 CNC 拆解百分比、選取零件和視角，對應頁面上的控制項。',inputSchema:{type:'object',properties:{explodePercent:{type:'number',minimum:0,maximum:100},part:{type:['string','null'],enum:[...metadata.map(p=>p.id),null]},view:{type:'string',enum:['iso','front','side','top']}},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:async input=>{if(!input||typeof input!=='object'||Object.keys(input).some(k=>!['explodePercent','part','view'].includes(k)))throw Error('無效的輸入');if('explodePercent'in input&&(!Number.isFinite(input.explodePercent)||input.explodePercent<0||input.explodePercent>100))throw Error('拆解程度須在 0 至 100 之間');if('part'in input&&input.part!==null&&!metadata.some(p=>p.id===input.part))throw Error('未知零件');if('view'in input&&!['iso','front','side','top'].includes(input.view))throw Error('未知視角');stopPlay();if('explodePercent'in input)setAmount(input.explodePercent/100,true);if('part'in input)selectPart(input.part);updateParts();if(input.view)fitView(input.view);await new Promise(requestAnimationFrame);return {explodePercent:Math.round(amount*100),selected};}};
