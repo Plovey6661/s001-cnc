@@ -22,19 +22,15 @@ const $ = s=>document.querySelector(s);
 const groups=new Map(), meshList=[], labels=new Map(), leaders=new Map();
 let selected=null, isolated=false, amount=.85, target=.85, playing=false, phase=0, last=performance.now(), ready=false;
 let renderer,controls,camera,scene,grid,modelScale=1,baseBox,modelInfo;
-let level=1,sceneOneStage='learn',machining=null,machiningPromise=null,programming=null,freeProgramming=null;
+let level=1,machining=null,machiningPromise=null,programming=null,freeProgramming=null;
 const eyeIcon='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
-function shuffle(list){const a=list.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function partExplode(part,t){return part.id==='cover'?THREE.MathUtils.clamp((t-.52)/.48,0,1):t;}
 for(const [i,part] of metadata.entries()){
   part.index=String(i+1).padStart(2,'0');
-  part.guessId='';
   const row=document.createElement('div');row.className='part-row';row.dataset.part=part.id;
-  const options=['<option value="">選擇名稱</option>',...shuffle(metadata).map(o=>`<option value="${o.id}">${o.zh}</option>`)].join('');
-  row.innerHTML=`<button class="part-select" data-part="${part.id}" aria-pressed="false"><span class="part-no">${part.index}</span><span class="part-copy"><span class="part-name">${part.zh}</span><span class="part-en">${part.en}</span></span><span class="part-quiz-hint">此零件</span></button><label class="part-guess-wrap"><span class="sr-only">選擇此零件的名稱</span><select class="part-guess" data-part="${part.id}">${options}</select></label><button class="eye" aria-label="隱藏此零件" aria-pressed="true">${eyeIcon}</button>`;
+  row.innerHTML=`<button class="part-select" data-part="${part.id}" aria-pressed="false"><span class="part-no">${part.index}</span><span class="part-copy"><span class="part-name">${part.zh}</span><span class="part-en">${part.en}</span></span></button><button class="eye" aria-label="隱藏此零件" aria-pressed="true">${eyeIcon}</button>`;
   row.querySelector('.part-select').onclick=()=>selectPart(selected===part.id?null:part.id);
   row.querySelector('.eye').onclick=()=>{const g=groups.get(part.id);if(!g)return;g.visible=!g.visible;isolated=false;syncVisibility();};
-  row.querySelector('.part-guess').addEventListener('change',e=>{part.guessId=e.target.value;row.classList.remove('guess-ok','guess-bad');updateLabels();});
   $('#parts').append(row);
 }
 function syncVisibility(){
@@ -47,11 +43,9 @@ function selectPart(id){
   if(isolated){if(id){for(const [key,g] of groups)g.visible=key===id;}else{for(const g of groups.values())g.visible=true;isolated=false;}if(ready)fitView('iso');}
   if(part){
     groups.get(id)&&(groups.get(id).visible=true);
-    if(sceneOneStage==='quiz'){$('#detail-index').textContent='COMPONENT';$('#detail-name').textContent='已選取一個零件';$('#detail-description').textContent='請用左側下拉選單選出這個零件的名稱。八個名稱都會出現在選項裡。';$(`#parts .part-row[data-part="${id}"] .part-guess`)?.focus();}
-    else{$('#detail-index').textContent=`COMPONENT ${part.index} / 08`;$('#detail-name').textContent=part.zh;$('#detail-description').textContent=part.description;}
-    $('.detail-actions').hidden=false;$('#status').textContent=sceneOneStage==='quiz'?'已選取一個零件':`已選取${part.zh}`;
-  }else if(sceneOneStage==='quiz'){$('#detail-index').textContent='LEVEL 1-2';$('#detail-name').textContent='為每個零件選出正確名稱。';$('#detail-description').textContent='左側列出全部零件名稱。點選模型中的零件，再用下拉選單配對。';$('.detail-actions').hidden=true;}
-  else{$('#detail-index').textContent='LEVEL 1-1';$('#detail-name').textContent='從整體，看到每個零件。';$('#detail-description').textContent='拖曳拆解滑桿。平台蓋會較晚打開，避免先擋住機架。名稱標在零件旁，合裝時仍可讀。';$('.detail-actions').hidden=true;}
+    $('#detail-index').textContent=`COMPONENT ${part.index} / 08`;$('#detail-name').textContent=part.zh;$('#detail-description').textContent=part.description;
+    $('.detail-actions').hidden=false;$('#status').textContent=`已選取${part.zh}`;
+  }else{$('#detail-index').textContent='LEVEL 01';$('#detail-name').textContent='從整體，看到每個零件。';$('#detail-description').textContent='拖曳拆解滑桿。平台蓋會較晚打開，避免先擋住機架。名稱標在零件旁，合裝時仍可讀。';$('.detail-actions').hidden=true;}
   for(const p of metadata){const row=$(`[data-part="${p.id}"]`);row.classList.toggle('selected',p.id===id);row.querySelector('.part-select').setAttribute('aria-pressed',String(p.id===id));labels.get(p.id)?.classList.toggle('selected-label',p.id===id);}
   meshList.forEach(m=>{m.material.emissive.set(m.userData.part===id?0x198b74:0);m.material.emissiveIntensity=m.userData.part===id?.22:0;});
   syncVisibility();
@@ -88,7 +82,6 @@ function fitView(view='iso',at=amount,forceWhole=false){
 function updateParts(){for(const p of metadata){const g=groups.get(p.id);if(g)g.position.set(...p.offset).multiplyScalar(level===1?partExplode(p,amount):0);}scene?.updateMatrixWorld(true);}
 const projected=new THREE.Vector3();
 function labelText(part){
-  if(sceneOneStage==='quiz'){const guess=metadata.find(p=>p.id===part.guessId);return guess?guess.zh:'？';}
   return part.zh;
 }
 function updateLabels(){
@@ -178,48 +171,10 @@ async function setLevel(next){
   for(const [i,id]of ['level-one','level-two','level-three','level-four'].entries()){const b=$('#'+id);b.classList.toggle('active',level===i+1);b.setAttribute('aria-pressed',String(level===i+1));}
   $('.project-name h1').textContent=['','組裝探索','切削操作','運動指令','自由加工'][level];$('#viewport-eyebrow').textContent=['','LEVEL 01 / CNC ASSEMBLY','LEVEL 02 / CNC MACHINING','LEVEL 03 / AEROBASIC','LEVEL 04 / FREE MACHINING'][level];
   if(level>=2){$('#view-title').textContent=level===4?'自由加工':level===3?'指令與刀路':'切削操作';$('#view-state').textContent=level===4?'PREVIEW & EXECUTE':level===3?'PROGRAMMING LAB':'MANUAL MACHINING';$('#labels').hidden=true;grid.visible=false;machining.activate(true);if(level===3)programming?.activate(true);if(level===4)freeProgramming?.activate(true);}
-  else{machining?.activate(false);$('#labels').hidden=!$('#labels-toggle').checked;grid.visible=$('#grid-toggle').checked;setAmount(target,true);fitView('iso');setSceneOneStage(sceneOneStage,true);}
+  else{machining?.activate(false);$('#labels').hidden=!$('#labels-toggle').checked;grid.visible=$('#grid-toggle').checked;setAmount(target,true);fitView('iso');}
   if(!demoMode)$('.viewer').scrollIntoView({behavior:'smooth',block:'start'});
 }
 $('#level-one').onclick=()=>setLevel(1);$('#level-two').onclick=()=>setLevel(2);$('#level-three').onclick=()=>setLevel(3);$('#level-four').onclick=()=>setLevel(4);
-function setSceneOneStage(stage,keepAmount=false){
-  sceneOneStage=stage==='quiz'?'quiz':'learn';
-  document.body.dataset.stage=sceneOneStage;
-  $('#stage-learn').classList.toggle('active',sceneOneStage==='learn');
-  $('#stage-quiz').classList.toggle('active',sceneOneStage==='quiz');
-  $('#stage-learn').setAttribute('aria-selected',String(sceneOneStage==='learn'));
-  $('#stage-quiz').setAttribute('aria-selected',String(sceneOneStage==='quiz'));
-  $('#quiz-brief').hidden=sceneOneStage!=='quiz';
-  $('#quiz-bar').hidden=sceneOneStage!=='quiz';
-  if(sceneOneStage==='quiz'&&!keepAmount)setAmount(Math.max(amount,.82));
-  if(!selected)selectPart(null);else selectPart(selected);
-  updateLabels();
-}
-$('#stage-learn').onclick=()=>setSceneOneStage('learn',true);
-$('#stage-quiz').onclick=()=>setSceneOneStage('quiz');
-$('#quiz-check').onclick=()=>{
-  let right=0,filled=0;
-  for(const p of metadata){
-    const row=$(`#parts [data-part="${p.id}"]`);
-    const guess=row.querySelector('.part-guess').value;
-    p.guessId=guess;if(guess)filled++;if(guess===p.id)right++;
-    row.classList.toggle('guess-ok',guess===p.id);
-    row.classList.toggle('guess-bad',Boolean(guess)&&guess!==p.id);
-  }
-  $('#quiz-score').textContent=filled===0?'請先為零件選擇名稱':`答對 ${right} / 8`;
-  updateLabels();
-};
-$('#quiz-reset').onclick=()=>{
-  for(const p of metadata){
-    p.guessId='';
-    const row=$(`#parts [data-part="${p.id}"]`);
-    row.querySelector('.part-guess').value='';
-    row.classList.remove('guess-ok','guess-bad');
-  }
-  $('#quiz-score').textContent='尚未核對';
-  updateLabels();
-};
-if(pageParams.get('stage')==='2'||pageParams.get('stage')==='quiz')sceneOneStage='quiz';
 function registerTools(){
   if(!document.modelContext?.registerTool)return;const lifecycle=new AbortController();window.addEventListener('pagehide',()=>lifecycle.abort(),{once:true});
   const tool={name:'configure_cnc_view',title:'調整 CNC 爆炸圖',description:'設定 CNC 拆解百分比、選取零件和視角，對應頁面上的控制項。',inputSchema:{type:'object',properties:{explodePercent:{type:'number',minimum:0,maximum:100},part:{type:['string','null'],enum:[...metadata.map(p=>p.id),null]},view:{type:'string',enum:['iso','front','side','top']}},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:false},execute:async input=>{if(!input||typeof input!=='object'||Object.keys(input).some(k=>!['explodePercent','part','view'].includes(k)))throw Error('無效的輸入');if('explodePercent'in input&&(!Number.isFinite(input.explodePercent)||input.explodePercent<0||input.explodePercent>100))throw Error('拆解程度須在 0 至 100 之間');if('part'in input&&input.part!==null&&!metadata.some(p=>p.id===input.part))throw Error('未知零件');if('view'in input&&!['iso','front','side','top'].includes(input.view))throw Error('未知視角');stopPlay();if('explodePercent'in input)setAmount(input.explodePercent/100,true);if('part'in input)selectPart(input.part);updateParts();if(input.view)fitView(input.view);await new Promise(requestAnimationFrame);return {explodePercent:Math.round(amount*100),selected};}};
